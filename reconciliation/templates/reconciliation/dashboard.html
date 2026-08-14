@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<header class="header">
+    <div class="header-inner">
+        <div>
+            <h1>تسوية صناديق الصيدليات اليومية</h1>
+            <p>مطابقة صورة صندوق كل صيدلية مع ملف البيان المحاسبي</p>
+        </div>
+        <div class="header-controls">
+            <form method="get" class="date-nav">
+                <a href="?date={{ prev_date|date:'Y-m-d' }}" class="icon-btn" title="اليوم السابق">›</a>
+                <input type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}" onchange="this.form.submit()">
+                <a href="?date={{ next_date|date:'Y-m-d' }}" class="icon-btn" title="اليوم التالي">‹</a>
+            </form>
+            {% if not is_today %}
+                <a href="?" class="today-pill">العودة لليوم</a>
+            {% endif %}
+        </div>
+        <form
+            hx-post="{% url 'reconciliation:add_pharmacy' %}"
+            hx-target="#pharmacy-grid"
+            hx-swap="beforeend"
+            hx-on::after-request="if(event.detail.successful) this.reset()"
+            class="add-pharmacy-form"
+        >
+            <input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}">
+            <input
+                type="text"
+                name="name"
+                required
+                placeholder="اسم صيدلية جديدة"
+                class="input"
+            >
+            <button type="submit" class="btn btn-green">+ إضافة صيدلية</button>
+        </form>
+    </div>
+</header>
+
+<main class="container">
+    <div id="pharmacy-grid" class="pharmacy-grid">
+        {% for card in cards %}
+            {% include 'reconciliation/_pharmacy_card.html' with pharmacy=card.pharmacy reconciliation=card.reconciliation view_date=selected_date %}
+        {% empty %}
+            <p class="empty-note">لا توجد صيدليات بعد. أضف أول صيدلية من الأعلى.</p>
+        {% endfor %}
+    </div>
+
+    <div class="compare-all-wrap">
+        <button
+            type="button"
+            onclick="htmx.trigger(document.body, 'compareAll')"
+            class="btn btn-dark btn-lg"
+        >
+            قارن كل الصيدليات
+        </button>
+    </div>
+</main>
+
+{% include 'reconciliation/_results_section.html' %}
+
+<script>
+    // Each pharmacy's compare response only touches its own result slot
+    // (see views._respond_with_updated_state), so the header's summary
+    // counts can no longer be trusted to a server-rendered snapshot - two
+    // "compare all" responses can arrive in either order and a snapshot-based
+    // count would just show whichever one landed last. Recomputing from
+    // what's actually in the DOM right now is always correct regardless of
+    // arrival order.
+    function recomputeResultsSummary() {
+        var grid = document.getElementById('results-grid');
+        if (!grid) return;
+        var matched = grid.querySelectorAll('.result-card .badge-green').length;
+        var diff = grid.querySelectorAll('.result-card .badge-red').length;
+        var errored = grid.querySelectorAll('.result-card .badge-amber').length;
+
+        var matchedEl = document.getElementById('summary-matched');
+        var diffEl = document.getElementById('summary-diff');
+        var errorEl = document.getElementById('summary-error');
+        var errorCountEl = document.getElementById('summary-error-count');
+
+        if (matchedEl) matchedEl.innerHTML = '<span class="dot dot-green"></span>' + matched + ' صيدلية متطابقة';
+        if (diffEl) diffEl.innerHTML = '<span class="dot dot-red"></span>' + diff + ' صيدلية فيها فروقات';
+        if (errorEl && errorCountEl) {
+            errorCountEl.textContent = errored;
+            errorEl.style.display = errored ? '' : 'none';
+        }
+    }
+    document.body.addEventListener('htmx:oobAfterSwap', function (evt) {
+        if (evt.detail.target.id && evt.detail.target.id.indexOf('result-slot-') === 0) {
+            recomputeResultsSummary();
+        }
+    });
+</script>
+{% endblock %}

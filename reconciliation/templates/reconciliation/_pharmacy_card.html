@@ -1,0 +1,59 @@
+<div id="pharmacy-card-{{ pharmacy.id }}" class="pharmacy-card">
+    <div class="pharmacy-card-head">
+        <h3>{{ pharmacy.name }}</h3>
+
+        {% if not reconciliation or not reconciliation.image_file or not reconciliation.excel_file %}
+            <span class="badge badge-gray">لم يتم الرفع بعد</span>
+        {% elif reconciliation.status == 'pending' %}
+            <span class="badge badge-blue">جاهز للمطابقة</span>
+        {% elif reconciliation.status == 'analyzed' and not reconciliation.comparison_result.has_differences %}
+            <span class="badge badge-green">متطابق</span>
+        {% elif reconciliation.status == 'analyzed' and reconciliation.comparison_result.has_differences %}
+            <span class="badge badge-red">يوجد فروقات</span>
+        {% elif reconciliation.status == 'error' %}
+            <span class="badge badge-amber">حدث خطأ</span>
+        {% endif %}
+    </div>
+
+    {% if upload_error %}
+        <p class="alert alert-red">{{ upload_error }}</p>
+    {% endif %}
+
+    <div class="upload-grid">
+        <div>
+            <p class="upload-label">تقرير صندوق الصيدلية (صورة أو إكسل)</p>
+            {% include 'reconciliation/_upload_dropzone.html' with pharmacy=pharmacy view_date=view_date field_name='image_file' accept='image/png,image/jpeg,.xlsx,.xls' url_name='reconciliation:upload_image' file_field=reconciliation.image_file placeholder_text='رفع صورة أو ملف إكسل للصندوق' uploaded_label='تم رفع تقرير الصندوق' %}
+        </div>
+        <div>
+            <p class="upload-label">ملف البيان (إكسل)</p>
+            {% include 'reconciliation/_upload_dropzone.html' with pharmacy=pharmacy view_date=view_date field_name='excel_file' accept='.xlsx,.xls' url_name='reconciliation:upload_excel' file_field=reconciliation.excel_file placeholder_text='رفع ملف البيان' uploaded_label='تم رفع ملف البيان' %}
+        </div>
+    </div>
+
+    {% if reconciliation and reconciliation.ready_to_compare %}
+        <button
+            type="button"
+            hx-post="{% url 'reconciliation:run_comparison' reconciliation.id %}"
+            hx-target="#pharmacy-card-{{ pharmacy.id }}"
+            hx-swap="outerHTML"
+            hx-indicator="#comparing-{{ pharmacy.id }}"
+            hx-trigger="click, compareAll from:body"
+            class="btn btn-dark compare-btn"
+            id="comparing-{{ pharmacy.id }}"
+        >
+            <span class="btn-label-idle">
+                {% if reconciliation.status == 'error' %}
+                    إعادة المحاولة
+                {% elif reconciliation.status == 'analyzed' %}
+                    إعادة المطابقة
+                {% else %}
+                    قارن هذه الصيدلية
+                {% endif %}
+            </span>
+            <span class="btn-label-loading"><span class="spinner spinner-sm spinner-light"></span> جارٍ التحليل...</span>
+        </button>
+        {% if reconciliation.status == 'error' and reconciliation.error_message %}
+            <p class="alert alert-amber">{{ reconciliation.error_message }}</p>
+        {% endif %}
+    {% endif %}
+</div>

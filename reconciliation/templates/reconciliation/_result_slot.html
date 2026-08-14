@@ -1,0 +1,7 @@
+<div id="result-slot-{{ pharmacy.id }}" class="result-slot" hx-swap-oob="true">
+    {% if error %}
+        {% include 'reconciliation/_result_card.html' with pharmacy=pharmacy reconciliation=reconciliation error=error result=None %}
+    {% elif result %}
+        {% include 'reconciliation/_result_card.html' with pharmacy=pharmacy reconciliation=reconciliation error=None result=result %}
+    {% endif %}
+</div>

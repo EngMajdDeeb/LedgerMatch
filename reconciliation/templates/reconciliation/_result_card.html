@@ -1,0 +1,107 @@
+{% load reconciliation_extras %}
+<div class="result-card">
+    <div class="result-card-head">
+        <h3>{{ pharmacy.name }}</h3>
+        {% if error %}
+            <span class="badge badge-amber">تعذّرت المطابقة</span>
+        {% elif result.has_differences %}
+            <span class="badge badge-red">يوجد فروقات</span>
+        {% else %}
+            <span class="badge badge-green">مطابق تماما</span>
+        {% endif %}
+    </div>
+
+    {% if error %}
+        <p class="alert alert-amber">{{ error }}</p>
+        <button
+            type="button"
+            hx-post="{% url 'reconciliation:run_comparison' reconciliation.id %}"
+            hx-target="#pharmacy-card-{{ pharmacy.id }}"
+            hx-swap="outerHTML"
+            class="btn btn-dark"
+            style="align-self:flex-start"
+        >
+            إعادة المحاولة
+        </button>
+    {% else %}
+        {% if result.summary_ar %}
+            <p class="summary-box">{{ result.summary_ar }}</p>
+        {% endif %}
+
+        <div class="stat-grid">
+            <div class="stat-box">
+                <p class="stat-label">صندوق نهاية / البيان</p>
+                <p class="stat-value">{{ result.totals_diff.bayan_closing_balance|money }}</p>
+            </div>
+            <div class="stat-box">
+                <p class="stat-label">صندوق نهاية / الصورة</p>
+                <p class="stat-value">{{ result.totals_diff.image_closing_balance|money }}</p>
+            </div>
+            <div class="stat-box {% if result.has_differences %}diff{% else %}ok{% endif %}">
+                <p class="stat-label">الفرق</p>
+                <p class="stat-value {% if result.has_differences %}red{% else %}green{% endif %}">{{ result.totals_diff.difference|money }}</p>
+            </div>
+        </div>
+
+        {% if result.differences %}
+            <div class="table-wrap">
+                <table class="diff-table">
+                    <thead>
+                        <tr>
+                            <th>البند</th>
+                            <th>قيمة البيان</th>
+                            <th>قيمة الصورة</th>
+                            <th>الفرق</th>
+                            <th>الحالة</th>
+                            <th>ملاحظات الصورة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in result.differences %}
+                            <tr>
+                                <td>{{ row.label_ar }}</td>
+                                <td>{{ row.bayan_value|money }}</td>
+                                <td>{{ row.image_value|money }}</td>
+                                <td class="{% if row.status == 'mismatch' %}mismatch{% endif %}">{{ row.difference|money }}</td>
+                                <td>
+                                    {% if row.status == 'match' %}
+                                        <span class="pill pill-match">مطابق</span>
+                                    {% elif row.status == 'mismatch' %}
+                                        <span class="pill pill-mismatch">فرق قيمة</span>
+                                    {% elif row.status == 'missing_in_bayan' %}
+                                        <span class="pill pill-missing">غير موجود في البيان</span>
+                                    {% elif row.status == 'missing_in_image' %}
+                                        <span class="pill pill-missing">غير موجود في الصورة</span>
+                                    {% else %}
+                                        <span class="pill pill-neutral">لا يوجد بيانات</span>
+                                    {% endif %}
+                                </td>
+                                <td class="note-cell">{{ row.image_note|default:"—" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+
+        <div class="result-footer">
+            <p>{{ result.matched_rows_count }} بند مطابق · {{ result.mismatched_rows_count }} بند مختلف</p>
+            <div class="actions">
+                {% if result.converted_excel_file %}
+                    <a href="{{ result.converted_excel_file.url }}" download="{{ pharmacy.name }} - {{ reconciliation.date|date:'Y-m-d' }} - نسخة اكسل من الصورة.xlsx" class="btn btn-outline btn-sm">
+                        تنزيل نسخة إكسل من الصورة
+                    </a>
+                {% endif %}
+                <button
+                    type="button"
+                    hx-post="{% url 'reconciliation:run_comparison' reconciliation.id %}"
+                    hx-target="#pharmacy-card-{{ pharmacy.id }}"
+                    hx-swap="outerHTML"
+                    class="btn btn-outline btn-sm"
+                >
+                    إعادة المطابقة
+                </button>
+            </div>
+        </div>
+    {% endif %}
+</div>

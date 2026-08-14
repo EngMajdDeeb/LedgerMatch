@@ -1,0 +1,30 @@
+<div id="results-section" hx-swap-oob="true">
+    <section class="results-section">
+        <div class="results-head">
+            <h2>نتائج المطابقة - {{ selected_date|date:"Y/m/d" }}</h2>
+            <div class="results-head-actions">
+                <div class="results-summary" id="results-summary">
+                    <span id="summary-matched"><span class="dot dot-green"></span>{{ matched_count }} صيدلية متطابقة</span>
+                    <span id="summary-diff"><span class="dot dot-red"></span>{{ diff_count }} صيدلية فيها فروقات</span>
+                    <span id="summary-error" {% if not error_count %}style="display:none"{% endif %}>
+                        <span class="dot dot-amber"></span><span id="summary-error-count">{{ error_count }}</span> تعذّرت مطابقتها
+                    </span>
+                </div>
+                <a href="{% url 'reconciliation:download_combined_excel' %}?date={{ selected_date|date:'Y-m-d' }}" class="btn btn-outline btn-sm">
+                    تنزيل ميزان المراجعة (كل الصيدليات)
+                </a>
+            </div>
+        </div>
+        <div class="results-grid" id="results-grid">
+            {% for card in cards %}
+                <div id="result-slot-{{ card.pharmacy.id }}" class="result-slot">
+                    {% if card.reconciliation.status == 'analyzed' %}
+                        {% include 'reconciliation/_result_card.html' with pharmacy=card.pharmacy reconciliation=card.reconciliation error=None result=card.reconciliation.comparison_result %}
+                    {% elif card.reconciliation.status == 'error' %}
+                        {% include 'reconciliation/_result_card.html' with pharmacy=card.pharmacy reconciliation=card.reconciliation error=card.reconciliation.error_message result=None %}
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+</div>

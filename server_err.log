@@ -1,0 +1,4 @@
+[12/Aug/2026 13:59:08] "GET /download-combined/?date=2026-08-08 HTTP/1.1" 200 5546
+[12/Aug/2026 13:59:08,445] - Broken pipe from ('127.0.0.1', 54756)
+[12/Aug/2026 13:59:23] "GET /download-combined/?date=2026-08-08 HTTP/1.1" 200 5546
+[12/Aug/2026 13:59:24,007] - Broken pipe from ('127.0.0.1', 54759)
